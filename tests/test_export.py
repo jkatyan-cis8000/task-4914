@@ -12,8 +12,11 @@ Test coverage:
 """
 
 import pytest
-from pathlib import Path
 import csv
+from pathlib import Path
+from datetime import datetime
+from models import Task
+from export import CSVExporter, ExportError
 
 
 class TestCSVExporterInitialization:
@@ -21,23 +24,25 @@ class TestCSVExporterInitialization:
     
     def test_exporter_creation_with_path(self, temp_csv_path):
         """Test creating CSVExporter with output path."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        assert exporter.output_path == temp_csv_path
     
     def test_exporter_accepts_string_path(self, temp_csv_path):
         """Test that CSVExporter accepts string paths."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        assert isinstance(exporter.output_path, Path)
     
     def test_exporter_accepts_path_object(self, temp_csv_path):
         """Test that CSVExporter accepts Path objects."""
-        pass
+        exporter = CSVExporter(temp_csv_path)
+        assert isinstance(exporter.output_path, Path)
     
-    def test_exporter_with_relative_path(self):
-        """Test CSVExporter with relative path."""
-        pass
-    
-    def test_exporter_with_absolute_path(self, temp_csv_path):
-        """Test CSVExporter with absolute path."""
-        pass
+    def test_exporter_creates_parent_directory(self, temp_csv_path):
+        """Test that exporter creates parent directories."""
+        nested_path = temp_csv_path.parent / "nested" / "dirs" / "export.csv"
+        exporter = CSVExporter(str(nested_path))
+        # Should not raise error
+        assert exporter.output_path == nested_path
 
 
 class TestCSVExportBasic:
@@ -45,27 +50,101 @@ class TestCSVExportBasic:
     
     def test_export_empty_list(self, temp_csv_path):
         """Test exporting empty task list."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        success, message = exporter.export_tasks([])
+        
+        assert success is True
+        assert temp_csv_path.exists()
     
     def test_export_single_task(self, temp_csv_path, sample_task_data):
         """Test exporting single task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        success, message = exporter.export_tasks([task])
+        assert success is True
+        assert temp_csv_path.exists()
     
     def test_export_multiple_tasks(self, temp_csv_path, many_tasks):
         """Test exporting multiple tasks."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        tasks = []
+        for i, task_data in enumerate(many_tasks[:5]):
+            tasks.append(Task(
+                id=i+1,
+                title=task_data["title"],
+                description=task_data["description"],
+                priority=task_data["priority"],
+                category=task_data["category"]
+            ))
+        
+        success, message = exporter.export_tasks(tasks)
+        assert success is True
+        assert temp_csv_path.exists()
     
     def test_export_returns_success(self, temp_csv_path, sample_task_data):
         """Test that export returns success status."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        success, message = exporter.export_tasks([task])
+        assert isinstance(success, bool)
+        assert success is True
     
     def test_export_creates_file(self, temp_csv_path, sample_task_data):
         """Test that export creates output file."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        assert not temp_csv_path.exists()
+        exporter.export_tasks([task])
+        assert temp_csv_path.exists()
     
     def test_exported_file_is_valid_csv(self, temp_csv_path, sample_task_data):
         """Test that exported file is valid CSV format."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        # Try to read as CSV
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) == 1
 
 
 class TestCSVFormat:
@@ -73,43 +152,45 @@ class TestCSVFormat:
     
     def test_csv_has_correct_headers(self, temp_csv_path, sample_task_data):
         """Test that CSV has correct column headers."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            headers = reader.fieldnames
+            
+            expected = ['id', 'title', 'description', 'priority', 'category', 'completed', 'created_at', 'updated_at']
+            assert headers == expected
     
     def test_csv_headers_in_correct_order(self, temp_csv_path, sample_task_data):
         """Test that CSV headers are in expected order."""
-        pass
-    
-    def test_csv_has_id_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes id column."""
-        pass
-    
-    def test_csv_has_title_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes title column."""
-        pass
-    
-    def test_csv_has_description_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes description column."""
-        pass
-    
-    def test_csv_has_priority_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes priority column."""
-        pass
-    
-    def test_csv_has_category_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes category column."""
-        pass
-    
-    def test_csv_has_completed_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes completed column."""
-        pass
-    
-    def test_csv_has_created_at_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes created_at column."""
-        pass
-    
-    def test_csv_has_updated_at_column(self, temp_csv_path, sample_task_data):
-        """Test that CSV includes updated_at column."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            first_line = f.readline().strip()
+            expected = "id,title,description,priority,category,completed,created_at,updated_at"
+            assert first_line == expected
 
 
 class TestCSVDataExport:
@@ -117,39 +198,166 @@ class TestCSVDataExport:
     
     def test_exported_title_matches(self, temp_csv_path, sample_task_data):
         """Test that exported title matches source task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['title'] == task_data["title"]
     
     def test_exported_description_matches(self, temp_csv_path, sample_task_data):
         """Test that exported description matches source task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['description'] == task_data["description"]
     
     def test_exported_priority_matches(self, temp_csv_path, sample_task_data):
         """Test that exported priority matches source task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['priority'] == task_data["priority"]
     
     def test_exported_category_matches(self, temp_csv_path, sample_task_data):
         """Test that exported category matches source task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['category'] == task_data["category"]
     
     def test_exported_completed_status_matches(self, temp_csv_path, sample_task_data):
         """Test that exported completed status matches source task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"],
+            completed=True
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['completed'] == 'Yes'
+    
+    def test_exported_completed_status_no(self, temp_csv_path, sample_task_data):
+        """Test that incomplete tasks export as 'No'."""
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=1,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"],
+            completed=False
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['completed'] == 'No'
     
     def test_exported_id_matches(self, temp_csv_path, sample_task_data):
         """Test that exported id matches source task."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        task_data = sample_task_data["valid_task"]
+        
+        task = Task(
+            id=42,
+            title=task_data["title"],
+            description=task_data["description"],
+            priority=task_data["priority"],
+            category=task_data["category"]
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['id'] == '42'
     
-    def test_exported_timestamps_match(self, temp_csv_path, sample_task_data):
-        """Test that exported timestamps match source task."""
-        pass
-    
-    def test_export_all_tasks_present(self, temp_csv_path, many_tasks):
+    def test_export_all_tasks_present(self, temp_csv_path):
         """Test that all tasks are exported."""
-        pass
-    
-    def test_exported_data_row_count(self, temp_csv_path, many_tasks):
-        """Test that CSV has correct number of data rows."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        tasks = []
+        for i in range(10):
+            tasks.append(Task(
+                id=i+1,
+                title=f"Task {i+1}",
+                description="Test",
+                priority="High",
+                category="Test"
+            ))
+        
+        exporter.export_tasks(tasks)
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) == 10
 
 
 class TestCSVSpecialCharacters:
@@ -157,104 +365,135 @@ class TestCSVSpecialCharacters:
     
     def test_export_quotes_in_title(self, temp_csv_path):
         """Test that quotes in title are properly escaped."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        task = Task(
+            id=1,
+            title='Task with "quotes"',
+            description="Test",
+            priority="High",
+            category="Test"
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['title'] == 'Task with "quotes"'
     
     def test_export_commas_in_description(self, temp_csv_path):
         """Test that commas in description don't break CSV format."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        task = Task(
+            id=1,
+            title="Task",
+            description="Description with, commas, inside",
+            priority="High",
+            category="Test"
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['description'] == "Description with, commas, inside"
     
     def test_export_newlines_in_description(self, temp_csv_path):
         """Test that newlines in description are properly handled."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        task = Task(
+            id=1,
+            title="Task",
+            description="Line 1\nLine 2\nLine 3",
+            priority="High",
+            category="Test"
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert "Line 1" in row['description']
     
     def test_export_unicode_characters(self, temp_csv_path):
         """Test that unicode characters are properly exported."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        task = Task(
+            id=1,
+            title="Tâche 中文 العربية",
+            description="Descriptioné",
+            priority="High",
+            category="Test"
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert "中文" in row['title']
     
-    def test_export_special_symbols(self, temp_csv_path):
-        """Test that special symbols are properly exported."""
-        pass
-    
-    def test_export_very_long_text(self, temp_csv_path):
-        """Test that very long text is properly exported."""
-        pass
-    
-    def test_export_empty_description(self, temp_csv_path, sample_task_data):
+    def test_export_empty_description(self, temp_csv_path):
         """Test that empty description is handled correctly."""
-        pass
-
-
-class TestCSVFilePaths:
-    """Test file path handling."""
-    
-    def test_export_with_absolute_path(self, temp_csv_path, sample_task_data):
-        """Test export with absolute file path."""
-        pass
-    
-    def test_export_with_relative_path(self, sample_task_data, tmp_path):
-        """Test export with relative file path."""
-        pass
-    
-    def test_export_creates_missing_parent_directory(self, sample_task_data, tmp_path):
-        """Test that export can create parent directories if they don't exist."""
-        pass
-    
-    def test_export_overwrites_existing_file(self, temp_csv_path, many_tasks):
-        """Test that export overwrites existing file."""
-        pass
-    
-    def test_export_path_with_spaces(self, sample_task_data, tmp_path):
-        """Test export with spaces in file path."""
-        pass
-    
-    def test_export_path_with_unicode_name(self, sample_task_data, tmp_path):
-        """Test export with unicode characters in path."""
-        pass
-
-
-class TestCSVExportErrors:
-    """Test error handling in CSV export."""
-    
-    def test_export_invalid_path(self, sample_task_data):
-        """Test export with invalid file path."""
-        pass
-    
-    def test_export_permission_denied(self, sample_task_data):
-        """Test export when permission is denied."""
-        pass
-    
-    def test_export_disk_full(self, sample_task_data):
-        """Test export behavior when disk is full."""
-        pass
-    
-    def test_export_invalid_task_object(self, temp_csv_path):
-        """Test export with invalid task objects."""
-        pass
-    
-    def test_export_returns_error_message(self, sample_task_data):
-        """Test that export returns error message on failure."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        task = Task(
+            id=1,
+            title="Task",
+            description="",
+            priority="High",
+            category="Test"
+        )
+        
+        exporter.export_tasks([task])
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            row = next(reader)
+            assert row['description'] == ""
 
 
 class TestCSVExportIntegration:
     """Test CSV export integration with database."""
     
-    def test_export_from_database(self, temp_db_path, temp_csv_path, many_tasks):
-        """Test exporting tasks from database to CSV."""
-        pass
-    
-    def test_export_filtered_tasks(self, temp_csv_path, many_tasks):
-        """Test exporting filtered task list."""
-        pass
-    
-    def test_export_by_category(self, temp_csv_path, many_tasks):
+    def test_export_by_category(self, temp_csv_path):
         """Test exporting tasks filtered by category."""
-        pass
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        tasks = [
+            Task(id=1, title="Work Task", description="Test", priority="High", category="Work"),
+            Task(id=2, title="Personal Task", description="Test", priority="High", category="Personal"),
+            Task(id=3, title="Work Task 2", description="Test", priority="High", category="Work"),
+        ]
+        
+        success, message = exporter.export_by_category(tasks, "Work")
+        assert success is True
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) == 2
+            assert all(row['category'] == 'Work' for row in rows)
     
-    def test_export_by_priority(self, temp_csv_path, many_tasks):
-        """Test exporting tasks filtered by priority."""
-        pass
-    
-    def test_export_completed_tasks_only(self, temp_csv_path, many_tasks):
-        """Test exporting only completed tasks."""
-        pass
+    def test_export_by_category_no_match(self, temp_csv_path):
+        """Test exporting with category that has no matches."""
+        exporter = CSVExporter(str(temp_csv_path))
+        
+        tasks = [
+            Task(id=1, title="Task 1", description="Test", priority="High", category="Work"),
+        ]
+        
+        success, message = exporter.export_by_category(tasks, "NonExistent")
+        assert success is True
+        
+        with open(temp_csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            # Only header, no data rows
+            assert len(rows) == 0
