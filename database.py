@@ -158,9 +158,19 @@ class Database:
             raise DatabaseError("Database not connected")
         
         try:
+            # Validate all fields before insertion
+            if not isinstance(title, str) or not title.strip():
+                raise ValidationError("Title must be a non-empty string")
+            
+            if not isinstance(description, str):
+                raise ValidationError("Description must be a string")
+            
             # Validate priority
             if priority not in VALID_PRIORITIES:
                 raise ValidationError(f"Invalid priority: {priority}")
+            
+            if not isinstance(category, str) or not category.strip():
+                raise ValidationError("Category must be a non-empty string")
             
             now = datetime.now().isoformat()
             

@@ -577,10 +577,14 @@ class TestUpdateTask:
             title=task_data["title"],
             description=task_data["description"],
             priority=task_data["priority"],
-            category=task_data["category"],
-            completed=True
+            category=task_data["category"]
         )
         
+        # Mark it complete first
+        completed_task = db.update_task(task.id, completed=True)
+        assert completed_task.completed is True
+        
+        # Then mark it incomplete
         updated = db.update_task(task.id, completed=False)
         assert updated.completed is False
         db.close()
